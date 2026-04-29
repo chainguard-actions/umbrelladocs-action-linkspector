@@ -1,5 +1,7 @@
 # umbrelladocs/action-linkspector
 
+Uncover broken links in your content using Linkspector GitHub action.
+
 Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/umbrelladocs/action-linkspector](https://github.com/umbrelladocs/action-linkspector).
 
 ## Versions

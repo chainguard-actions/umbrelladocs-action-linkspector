@@ -1,5 +1,6 @@
 {
   "owner": "umbrelladocs",
   "name": "action-linkspector",
-  "visibility": ""
+  "visibility": "internal",
+  "description": "Uncover broken links in your content using Linkspector GitHub action."
 }
