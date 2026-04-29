@@ -1,6 +1,12 @@
 # umbrelladocs/action-linkspector
 
-Hardened GitHub Action by [Chainguard](https://www.chainguard.dev).
+Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/umbrelladocs/action-linkspector](https://github.com/umbrelladocs/action-linkspector).
+
+## Versions
+
+| Version | Tag | Upstream commit |
+|---------|-----|-----------------|
+| v1.4.1 | [`v1.4.1`](https://github.com/chainguard-actions/action-linkspector/tree/v1.4.1) | — |
 
 ## Privacy
 
