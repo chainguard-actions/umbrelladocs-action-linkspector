@@ -14,11 +14,11 @@ Action **umbrelladocs--action-linkspector/v1.5.2** was hardened automatically. 1
 
 ### github-env-injection (severity: high)
 
-The run: block at approximately line 80 of action.yml writes the attacker-controlled value `inputs.fail_level` to `$GITHUB_ENV` without sanitization. The input is mapped to the env var `INPUT_FAIL_LEVEL` via `env: INPUT_FAIL_LEVEL: ${{ inputs.fail_level }}`, then written directly with `echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"`. Routing through an env: variable does NOT sanitize the value — the required sanitization step (`printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r'`) is missing before the write. An attacker could inject newlines into `inputs.fail_level` to set arbitrary environment variables in subsequent steps.
+In action.yml, a run: step writes the attacker-controlled input `inputs.fail_level` (mapped to env var INPUT_FAIL_LEVEL) directly to $GITHUB_ENV without the required sanitization step (`printf '%s' ... | tr -d '\n\r'`). An attacker can supply a newline-containing value for `fail_level` to inject arbitrary key=value pairs into the runner's environment, potentially overwriting sensitive variables like GITHUB_TOKEN or PATH. The unsanitized write is: `echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"`.
 
 Locations:
 
-- `action.yml:80`
+- `action.yml:62`
 
 ## Iteration Notes
 
@@ -28,5 +28,5 @@ Locations:
 
 **Notes:**
 
-Fixed the github-env-injection vulnerability in action.yml at the step that writes INPUT_FAIL_LEVEL to $GITHUB_ENV. Added sanitization using `safe_fail_level=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')` before the echo write, so that attacker-controlled newlines in `inputs.fail_level` cannot inject arbitrary environment variables into subsequent steps.
+Fixed the github-env-injection vulnerability in action.yml at the step that writes INPUT_FAIL_LEVEL to $GITHUB_ENV. The fix adds a sanitization step using `printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r'` to strip newlines and carriage returns from the attacker-controlled input before writing it to the environment file. The sanitized value is stored in `safe_fail_level` and that variable is used in the echo command instead of the raw input.
 
