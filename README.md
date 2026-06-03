@@ -1,6 +1,6 @@
 # umbrelladocs/action-linkspector
 
-Uncover broken links in your content using Linkspector GitHub action.
+Run 💀Linkspector with 🐶reviewdog on pull requests to uncover broken links in your content.
 
 Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at [https://github.com/umbrelladocs/action-linkspector](https://github.com/umbrelladocs/action-linkspector).
 
@@ -9,6 +9,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
 | v1.4.1 | [`v1.4.1`](https://github.com/chainguard-actions/umbrelladocs-action-linkspector/tree/v1.4.1) | — |
+| v1.5.2 | [`v1.5.2`](https://github.com/chainguard-actions/umbrelladocs-action-linkspector/tree/v1.5.2) | [`036f295`](https://github.com/umbrelladocs/action-linkspector/commit/036f295d12b67b0c4b445bc83db0538afb78db69) |
 
 ## Privacy
 
