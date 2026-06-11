@@ -1,7 +1,5 @@
----
 name: Run Linkspector with reviewdog
-description: Run 💀Linkspector with 🐶reviewdog on pull requests to uncover
-  broken links in your content.
+description: "Run \U0001F480Linkspector with \U0001F436reviewdog on pull requests to uncover broken links in your content."
 author: Gaurav Nelson
 inputs:
   github_token:
@@ -21,20 +19,18 @@ inputs:
     default: github-check
   filter_mode:
     description: >
-      Filtering mode for the reviewdog command
-      [added,diff_context,file,nofilter]. Default is added.
+      Filtering mode for the reviewdog command [added,diff_context,file,nofilter]. Default is added.
+
     default: added
   fail_level:
     description: >
-      Exit code for reviewdog when errors are found with severity greater
-      than or equal to the given level [none,any,info,warning,error]. Default is
-      `none`.
+      Exit code for reviewdog when errors are found with severity greater than or equal to the given level [none,any,info,warning,error]. Default is `none`.
+
     default: ""
   fail_on_error:
     description: >
-      (Deprecated) Exit code for reviewdog when errors are found
-      [true,false]. This option is ignored if you use `fail_level`. Default is
-      `false`.
+      (Deprecated) Exit code for reviewdog when errors are found [true,false]. This option is ignored if you use `fail_level`. Default is `false`.
+
     default: "false"
   reviewdog_flags:
     description: Additional reviewdog flags.
@@ -50,7 +46,24 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/setup-node@11bd71901bbe5b1630ceea73d27597364c9af683 # v5
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
       with:
         node-version: 24
     - name: Set reviewdog version
@@ -59,13 +72,13 @@ runs:
       shell: bash
     - name: Cache reviewdog binary
       id: cache-reviewdog
-      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
       with:
         path: ~/reviewdog-bin
         key: reviewdog-${{ runner.os }}-${{ runner.arch }}-${{ steps.reviewdog-version.outputs.reviewdog_version }}
     - name: Install reviewdog
       if: steps.cache-reviewdog.outputs.cache-hit != 'true'
-      uses: reviewdog/action-setup@d8edfce3dd5e1ec6978745e801f9c50b5ef80252 # v1
+      uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1
       with:
         reviewdog_version: ${{ steps.reviewdog-version.outputs.reviewdog_version }}
     - name: Copy reviewdog to cache location
