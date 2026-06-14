@@ -1,7 +1,5 @@
----
 name: Run Linkspector with reviewdog
-description: Run 💀Linkspector with 🐶reviewdog on pull requests to uncover
-  broken links in your content.
+description: "Run \U0001F480Linkspector with \U0001F436reviewdog on pull requests to uncover broken links in your content."
 author: Gaurav Nelson
 inputs:
   github_token:
@@ -21,20 +19,18 @@ inputs:
     default: github-check
   filter_mode:
     description: >
-      Filtering mode for the reviewdog command
-      [added,diff_context,file,nofilter]. Default is added.
+      Filtering mode for the reviewdog command [added,diff_context,file,nofilter]. Default is added.
+
     default: added
   fail_level:
     description: >
-      Exit code for reviewdog when errors are found with severity greater
-      than or equal to the given level [none,any,info,warning,error]. Default is
-      `none`.
+      Exit code for reviewdog when errors are found with severity greater than or equal to the given level [none,any,info,warning,error]. Default is `none`.
+
     default: ""
   fail_on_error:
     description: >
-      (Deprecated) Exit code for reviewdog when errors are found
-      [true,false]. This option is ignored if you use `fail_level`. Default is
-      `false`.
+      (Deprecated) Exit code for reviewdog when errors are found [true,false]. This option is ignored if you use `fail_level`. Default is `false`.
+
     default: "false"
   reviewdog_flags:
     description: Additional reviewdog flags.
@@ -50,6 +46,23 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
     - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
       with:
         node-version: 24
@@ -81,7 +94,7 @@ runs:
       shell: bash
     - run: |
         if [ -n "${INPUT_FAIL_LEVEL}" ]; then
-            safe_fail_level=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')
+            safe_fail_level=$(printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r')
             echo "INPUT_FAIL_LEVEL=${safe_fail_level}" >> "${GITHUB_ENV}"
         elif [ "${INPUT_FAIL_ON_ERROR}" = "true" ]; then
             echo "INPUT_FAIL_LEVEL=any" >> "${GITHUB_ENV}"
