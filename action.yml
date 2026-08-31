@@ -1,0 +1,123 @@
+name: Run Linkspector with reviewdog
+description: "Run \U0001F480Linkspector with \U0001F436reviewdog on pull requests to uncover broken links in your content."
+author: Gaurav Nelson
+inputs:
+  github_token:
+    description: GITHUB_TOKEN
+    default: ${{ github.token }}
+  workdir:
+    description: Working directory relative to the root directory.
+    default: .
+  tool_name:
+    description: Tool name to use for reviewdog reporter.
+    default: Linkspector
+  level:
+    description: Report level for reviewdog [info,warning,error].
+    default: error
+  reporter:
+    description: Reporter of reviewdog command [github-check,github-pr-review,github-pr-check].
+    default: github-check
+  filter_mode:
+    description: >
+      Filtering mode for the reviewdog command [added,diff_context,file,nofilter]. Default is added.
+
+    default: added
+  fail_level:
+    description: >
+      Exit code for reviewdog when errors are found with severity greater than or equal to the given level [none,any,info,warning,error]. Default is `none`.
+
+    default: ""
+  fail_on_error:
+    description: >
+      (Deprecated) Exit code for reviewdog when errors are found [true,false]. This option is ignored if you use `fail_level`. Default is `false`.
+
+    default: "false"
+  reviewdog_flags:
+    description: Additional reviewdog flags.
+    default: ""
+  config_file:
+    description: Specify the path for the Linkspector YML configuration file.
+    required: true
+    default: .linkspector.yml
+  show_stats:
+    description: Show statistics about the checked links.
+    required: false
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Chainguard usage telemetry
+      shell: bash
+      run: |
+        # Best-effort, fails open. Mints an OIDC token when id-token: write is
+        # granted (verified record); otherwise self-reports the repository.
+        tok=""
+        if [ -n "$ACTIONS_ID_TOKEN_REQUEST_URL" ] && [ -n "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
+          tok=$(curl -sf --max-time 2 \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=actions.chainguard.dev" \
+            | sed -n 's/.*"value":"\([^"]*\)".*/\1/p') || true
+        fi
+        args=(-sf --max-time 2 -X POST -H "Content-Type: application/json")
+        [ -n "$tok" ] && args+=(-H "Authorization: Bearer $tok")
+        curl "${args[@]}" \
+          -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
+          "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
+    - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      with:
+        node-version: 24
+        package-manager-cache: false
+    - name: Set reviewdog version
+      id: reviewdog-version
+      run: echo "reviewdog_version=v0.21.0" >> "$GITHUB_OUTPUT"
+      shell: bash
+    - name: Cache reviewdog binary
+      id: cache-reviewdog
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      with:
+        path: ~/reviewdog-bin
+        key: reviewdog-${{ runner.os }}-${{ runner.arch }}-${{ steps.reviewdog-version.outputs.reviewdog_version }}
+    - name: Install reviewdog
+      if: steps.cache-reviewdog.outputs.cache-hit != 'true'
+      uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1
+      with:
+        reviewdog_version: ${{ steps.reviewdog-version.outputs.reviewdog_version }}
+    - name: Copy reviewdog to cache location
+      if: steps.cache-reviewdog.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ~/reviewdog-bin
+        cp "$(which reviewdog)" ~/reviewdog-bin/
+      shell: bash
+    - name: Add cached reviewdog to PATH
+      if: steps.cache-reviewdog.outputs.cache-hit == 'true'
+      run: echo "$HOME/reviewdog-bin" >> $GITHUB_PATH
+      shell: bash
+    - run: |
+        if [ -n "${INPUT_FAIL_LEVEL}" ]; then
+            safe=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')
+            echo "INPUT_FAIL_LEVEL=${safe}" >> "${GITHUB_ENV}"
+        elif [ "${INPUT_FAIL_ON_ERROR}" = "true" ]; then
+            echo "INPUT_FAIL_LEVEL=any" >> "${GITHUB_ENV}"
+        else
+            echo "INPUT_FAIL_LEVEL=none" >> "${GITHUB_ENV}"
+        fi
+      shell: bash
+      env:
+        INPUT_FAIL_LEVEL: ${{ inputs.fail_level }}
+        INPUT_FAIL_ON_ERROR: ${{ inputs.fail_on_error }}
+    - run: $GITHUB_ACTION_PATH/script.sh
+      shell: bash
+      env:
+        INPUT_GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_WORKDIR: ${{ inputs.workdir }}
+        INPUT_TOOL_NAME: ${{ inputs.tool_name }}
+        INPUT_LEVEL: ${{ inputs.level }}
+        INPUT_REPORTER: ${{ inputs.reporter }}
+        INPUT_FILTER_MODE: ${{ inputs.filter_mode }}
+        INPUT_FAIL_LEVEL: ${{ env.INPUT_FAIL_LEVEL }}
+        INPUT_REVIEWDOG_FLAGS: ${{ inputs.reviewdog_flags }}
+        INPUT_CONFIG_FILE: ${{ inputs.config_file }}
+        INPUT_SHOW_STATS: ${{ inputs.show_stats }}
+branding:
+  icon: link-2
+  color: blue

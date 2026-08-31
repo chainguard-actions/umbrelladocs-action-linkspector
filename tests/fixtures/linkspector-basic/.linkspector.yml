@@ -1,0 +1,3 @@
+dirs:
+  - tests/fixtures/linkspector-basic/content
+useGitIgnore: false
