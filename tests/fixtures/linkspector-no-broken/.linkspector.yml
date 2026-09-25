@@ -1,0 +1,6 @@
+dirs:
+  - path: content
+    extensions:
+      - .md
+useGitIgnore: false
+ignorePatterns: []

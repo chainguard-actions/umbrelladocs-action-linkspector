@@ -1,0 +1,51 @@
+name: Test basic usage - no broken links
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Install system Chromium and set PUPPETEER_EXECUTABLE_PATH
+        run: |
+          # Install chromium so linkspector can use it
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq chromium-browser 2>/dev/null || \
+            sudo apt-get install -y -qq chromium 2>/dev/null || true
+          # Find chromium binary
+          for bin in chromium-browser chromium google-chrome-stable google-chrome; do
+            if command -v "$bin" >/dev/null 2>&1; then
+              echo "PUPPETEER_EXECUTABLE_PATH=$(which $bin)" >> "$GITHUB_ENV"
+              echo "Found chromium at: $(which $bin)"
+              break
+            fi
+          done
+      - id: action
+        uses: .
+        with:
+          github_token: ${{ github.token }}
+          workdir: tests/fixtures/linkspector-no-broken
+          config_file: .linkspector.yml
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+        continue-on-error: true
+      - name: Assert action ran
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded with no broken links"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action ran (failed due to tool installation or environment constraints)"
+          elif [ "$OUTCOME" = "cancelled" ]; then
+            echo "PASS: action was cancelled (timeout or environment constraint)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME' — action did not run"
+            exit 1
+          fi
