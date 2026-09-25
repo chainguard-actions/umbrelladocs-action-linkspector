@@ -1,0 +1,4 @@
+---
+# Linkspector config: check files with broken links
+files:
+  - path: action/testdata/text.md

@@ -1,0 +1,4 @@
+---
+# Linkspector config: check files in a subdirectory
+files:
+  - path: valid-content.md

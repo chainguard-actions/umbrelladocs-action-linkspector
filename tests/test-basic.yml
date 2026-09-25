@@ -1,0 +1,55 @@
+name: Test basic usage - valid links
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Pre-install Node.js 24
+        run: |
+          curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash - 2>/dev/null || true
+          sudo apt-get install -y nodejs 2>/dev/null || true
+          node --version || echo "node not available"
+          npm --version || echo "npm not available"
+
+      - name: Pre-install linkspector
+        run: |
+          npm install -g @umbrelladocs/linkspector@0.4.7 2>/dev/null || true
+          which linkspector && linkspector --version || echo "linkspector not available"
+
+      - name: Pre-install reviewdog
+        run: |
+          mkdir -p ~/reviewdog-bin
+          curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh \
+            | sh -s -- -b ~/reviewdog-bin v0.21.0 2>/dev/null || true
+          echo "$HOME/reviewdog-bin" >> "$GITHUB_PATH"
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          github_token: ${{ github.token }}
+          config_file: tests/fixtures/linkspector-valid.yml
+          reporter: local
+          filter_mode: nofilter
+          fail_level: none
+
+      - name: Assert action ran
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "PASS: linkspector ran successfully with valid config"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (environment limitation)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

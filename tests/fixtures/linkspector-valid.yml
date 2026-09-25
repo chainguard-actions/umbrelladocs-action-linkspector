@@ -1,0 +1,4 @@
+---
+# Linkspector config: check only files with valid links
+files:
+  - path: tests/fixtures/valid-content.md

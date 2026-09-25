@@ -1,0 +1,4 @@
+---
+# Linkspector config: check files for stats test
+files:
+  - path: tests/fixtures/valid-content.md
