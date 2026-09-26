@@ -93,8 +93,8 @@ runs:
       shell: bash
     - run: |
         if [ -n "${INPUT_FAIL_LEVEL}" ]; then
-            safe=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')
-            echo "INPUT_FAIL_LEVEL=${safe}" >> "${GITHUB_ENV}"
+            safe_fail_level=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')
+            echo "INPUT_FAIL_LEVEL=${safe_fail_level}" >> "${GITHUB_ENV}"
         elif [ "${INPUT_FAIL_ON_ERROR}" = "true" ]; then
             echo "INPUT_FAIL_LEVEL=any" >> "${GITHUB_ENV}"
         else
