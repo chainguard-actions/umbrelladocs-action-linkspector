@@ -63,7 +63,7 @@ runs:
         curl "${args[@]}" \
           -d "{\"repository\":\"${GITHUB_REPOSITORY}\",\"action\":\"${GITHUB_ACTION_REPOSITORY}\"}" \
           "https://actions.enforce.dev/actions/v1/record" >/dev/null 2>&1 || true
-    - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+    - uses: chainguard-actions/actions-setup-node@09eef6d0a009e3b584fd17d0143592255d14fe94 # v5
       with:
         node-version: 24
         package-manager-cache: false
@@ -73,13 +73,13 @@ runs:
       shell: bash
     - name: Cache reviewdog binary
       id: cache-reviewdog
-      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+      uses: chainguard-actions/actions-cache@b5b76c7016521bd34554159c882773b3df2e994a # v5.0.5
       with:
         path: ~/reviewdog-bin
         key: reviewdog-${{ runner.os }}-${{ runner.arch }}-${{ steps.reviewdog-version.outputs.reviewdog_version }}
     - name: Install reviewdog
       if: steps.cache-reviewdog.outputs.cache-hit != 'true'
-      uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1
+      uses: chainguard-actions/reviewdog-action-setup@1ce633154760f8ceb9de1e4c17deb0188ef82866 # v1
       with:
         reviewdog_version: ${{ steps.reviewdog-version.outputs.reviewdog_version }}
     - name: Copy reviewdog to cache location
@@ -94,7 +94,7 @@ runs:
       shell: bash
     - run: |
         if [ -n "${INPUT_FAIL_LEVEL}" ]; then
-            safe=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')
+            safe=$(printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r')
             echo "INPUT_FAIL_LEVEL=${safe}" >> "${GITHUB_ENV}"
         elif [ "${INPUT_FAIL_ON_ERROR}" = "true" ]; then
             echo "INPUT_FAIL_LEVEL=any" >> "${GITHUB_ENV}"

@@ -16,11 +16,11 @@ Action **UmbrellaDocs--action-linkspector/v1.5.5** was hardened automatically. 1
 
 ### github-env-injection (severity: high)
 
-In action.yml, the composite step that conditionally sets INPUT_FAIL_LEVEL writes the value of the `INPUT_FAIL_LEVEL` env var directly to `$GITHUB_ENV` without sanitization: `echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"`. The env var is populated from `${{ inputs.fail_level }}` (untrusted caller-controlled input). An attacker can supply a value containing newline characters to inject arbitrary key=value pairs into the GitHub environment file, potentially overwriting sensitive environment variables for subsequent steps. The required sanitization (`safe=$(printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r')`) is absent.
+In action.yml, a composite action run block writes the env var `INPUT_FAIL_LEVEL` — sourced from `${{ inputs.fail_level }}` (an untrusted caller-controlled input) — directly to `$GITHUB_ENV` without sanitization. The line `echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"` can be exploited by an attacker supplying a newline-containing value for `inputs.fail_level` to inject arbitrary environment variables into subsequent steps. The required sanitization step (`safe=$(printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r')`) is missing before the write.
 
 Locations:
 
-- `action.yml:80`
+- `action.yml:68`
 
 ## Iteration Notes
 
@@ -30,5 +30,5 @@ Locations:
 
 **Notes:**
 
-Fixed the github-env-injection vulnerability in action.yml at line 80. The INPUT_FAIL_LEVEL value (populated from caller-controlled input `inputs.fail_level`) was being written directly to $GITHUB_ENV without sanitization. Added sanitization using `safe=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')` before writing to $GITHUB_ENV, which strips newline and carriage return characters that could be used to inject arbitrary key=value pairs into the GitHub environment file.
+Fixed github-env-injection in action.yml at line 68. Added sanitization step `safe=$(printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r')` before writing to $GITHUB_ENV, replacing the direct `echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"` with `echo "INPUT_FAIL_LEVEL=${safe}" >> "${GITHUB_ENV}"`. This strips any embedded newlines or carriage returns from the caller-controlled `inputs.fail_level` value before it is written to the environment file, preventing environment variable injection attacks.
 
