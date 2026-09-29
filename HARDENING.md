@@ -16,37 +16,29 @@ Action **UmbrellaDocs--action-linkspector/v1.4.1** was hardened automatically. 2
 
 ### unpinned-uses (severity: high)
 
-Three `uses:` references in action.yml are pinned to mutable tags instead of immutable 40-character commit SHAs, making the action vulnerable to supply-chain attacks if those tags are moved or compromised:
-- `actions/setup-node@v5` (line 53)
-- `actions/cache@v4` (line 62)
-- `reviewdog/action-setup@v1` (line 68)
-
-Each should be replaced with a full SHA pin, e.g. `actions/setup-node@<40-hex-sha> # v5`.
+Three `uses:` references in action.yml use mutable version tags instead of pinned 40-character commit SHA digests, making the action vulnerable to supply-chain attacks if the referenced tag is moved or overwritten:
+- `uses: actions/setup-node@v5` (line 47)
+- `uses: actions/cache@v4` (line 57)
+- `uses: reviewdog/action-setup@v1` (line 63)
+Each should be pinned to a full SHA, e.g. `actions/setup-node@<40-hex-sha> # v5`.
 
 Locations:
 
-- `action.yml:53`
-- `action.yml:62`
-- `action.yml:68`
+- `action.yml:47`
+- `action.yml:57`
+- `action.yml:63`
 
 ### github-env-injection (severity: high)
 
-In the `run:` block starting at line 81, the shell variable `INPUT_FAIL_LEVEL` — which is set from `inputs.fail_level` (an untrusted caller-controlled input) via the `env:` block — is written directly to `$GITHUB_ENV` without sanitization:
-
-```
-echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"
-```
-
-An attacker who controls `inputs.fail_level` can inject newline characters to add arbitrary key=value pairs into the runner's environment for subsequent steps. The required fix is to sanitize before writing:
-
-```bash
-safe=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')
-echo "INPUT_FAIL_LEVEL=${safe}" >> "${GITHUB_ENV}"
-```
+A `run:` block writes user-controlled input values to `$GITHUB_ENV` without the required newline-stripping sanitization (`printf '%s' ... | tr -d '\n\r'`). The env vars `INPUT_FAIL_LEVEL` (sourced from `inputs.fail_level`) and `INPUT_FAIL_ON_ERROR` (sourced from `inputs.fail_on_error`) are written directly into `$GITHUB_ENV` via:
+  `echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"`
+  `echo "INPUT_FAIL_LEVEL=any" >> "${GITHUB_ENV}"`
+  `echo "INPUT_FAIL_LEVEL=none" >> "${GITHUB_ENV}"`
+Routing through an `env:` block does not sanitize the values. An attacker who controls `inputs.fail_level` could inject newlines to set arbitrary environment variables for subsequent steps.
 
 Locations:
 
-- `action.yml:83`
+- `action.yml:75`
 
 ## Iteration Notes
 
@@ -56,9 +48,5 @@ Locations:
 
 **Notes:**
 
-Fixed all four issues in hardened/action/action.yml:
-1. Pinned actions/setup-node@v5 → @a0853c24544627f65ddf259abe73b1d18a591444 # v5
-2. Pinned actions/cache@v4 → @0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-3. Pinned reviewdog/action-setup@v1 → @d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1
-4. Fixed GITHUB_ENV injection: sanitized INPUT_FAIL_LEVEL with `printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r'` before writing to ${GITHUB_ENV}, preventing newline-based environment variable injection attacks.
+Fixed three unpinned `uses:` references in action.yml by pinning them to full 40-character commit SHAs: actions/setup-node@v5 → @a0853c24544627f65ddf259abe73b1d18a591444, actions/cache@v4 → @0057852bfaa89a56745cba8c7296529d2fc39830, reviewdog/action-setup@v1 → @d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f. Fixed the github-env-injection finding by sanitizing the user-controlled INPUT_FAIL_LEVEL value with `printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r'` before writing it to $GITHUB_ENV. The literal constant values 'any' and 'none' written in the elif/else branches are safe and do not require sanitization.
 
