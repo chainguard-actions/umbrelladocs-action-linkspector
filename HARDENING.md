@@ -1,6 +1,6 @@
 <!-- markdownlint-disable -->
 
-# Hardening Report: umbrelladocs--action-linkspector/v1.5.4
+# Hardening Report: UmbrellaDocs--action-linkspector/v1.5.4
 
 > This file was generated automatically by the hardening agent.
 
@@ -8,19 +8,19 @@
 
 **Test Policy SHA:** `843adf9e4b8f85d0c08b27b9d0b09dd094b54702`
 
-**Harden Agent Version:** `1`
+**Harden Agent Version:** `2`
 
-Action **umbrelladocs--action-linkspector/v1.5.4** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
+Action **UmbrellaDocs--action-linkspector/v1.5.4** was hardened automatically. 1 finding(s) were identified and resolved across 1 iteration(s).
 
 ## Findings Fixed
 
 ### github-env-injection (severity: high)
 
-In action.yml, the composite step that resolves the fail_level input writes the unsanitized value of INPUT_FAIL_LEVEL (sourced from inputs.fail_level via the env: block) directly to $GITHUB_ENV without first stripping newlines with `printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r'`. An attacker-controlled value containing a newline can inject arbitrary key=value pairs into the runner's environment for subsequent steps. The offending line is: `echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"`
+In action.yml, a run: block writes the value of INPUT_FAIL_LEVEL (sourced from inputs.fail_level, an attacker-controlled input) directly to $GITHUB_ENV without sanitization: `echo "INPUT_FAIL_LEVEL=${INPUT_FAIL_LEVEL}" >> "${GITHUB_ENV}"`. The env var INPUT_FAIL_LEVEL is set from `${{ inputs.fail_level }}` in the step's env: block. A newline character embedded in the input value could inject arbitrary key=value pairs into the GitHub environment file, affecting subsequent steps. The required sanitization step (`printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r'`) is absent before the write.
 
 Locations:
 
-- `action.yml:79`
+- `action.yml:69`
 
 ## Iteration Notes
 
@@ -30,5 +30,5 @@ Locations:
 
 **Notes:**
 
-Fixed the github-env-injection vulnerability in hardened/action/action.yml at line 79. The unsanitized INPUT_FAIL_LEVEL value was being written directly to $GITHUB_ENV. The fix introduces a sanitization step using `safe_fail_level=$(printf '%s' "${INPUT_FAIL_LEVEL}" | tr -d '\n\r')` before writing to GITHUB_ENV, which strips any embedded newlines or carriage returns that could be used to inject arbitrary environment variables.
+Fixed github-env-injection in action.yml at line 69. Added sanitization of INPUT_FAIL_LEVEL before writing to $GITHUB_ENV: stored the result of `printf '%s' "$INPUT_FAIL_LEVEL" | tr -d '\n\r'` in a `safe_fail_level` variable, then used that sanitized value in the echo statement. This prevents newline injection attacks where an attacker could embed newline characters in the `fail_level` input to inject arbitrary key=value pairs into the GitHub environment file.
 
